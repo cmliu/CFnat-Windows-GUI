@@ -22,6 +22,7 @@ namespace cfnat.win.gui
             InitializeComponent();
             LoadFromIni();
             this.FormClosing += Form1_FormClosing;
+            this.Load += Form1_Load; // 添加这一行来确保 Load 事件被处理
             comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox2.DropDownStyle = ComboBoxStyle.DropDownList;
             GetLocalIPs();
@@ -48,9 +49,13 @@ namespace cfnat.win.gui
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            // 启动时隐藏窗体，只显示托盘图标
-            this.Hide();
-            notifyIcon.Visible = true; // 显示托盘图标
+            if (checkBox1.Checked)
+            {
+                this.WindowState = FormWindowState.Minimized; // 先最小化窗体
+                this.ShowInTaskbar = false; // 不在任务栏显示
+                this.Hide(); // 然后隐藏窗体
+                notifyIcon.Visible = true; // 显示托盘图标
+            }
         }
 
         // 当双击系统托盘图标时触发
@@ -72,8 +77,12 @@ namespace cfnat.win.gui
         // 当点击系统托盘菜单中的"退出"选项时触发
         private void NotifyIcon_Exit(object sender, EventArgs e)
         {
-            //notifyIcon.Visible = false;
-            Application.Exit();
+            if (button1.Text == "停止")
+            {
+                button1_Click(sender, e);
+            }
+                //notifyIcon.Visible = false;
+                Application.Exit();
         }
 
         // 修改 Form1_FormClosing 方法
@@ -107,7 +116,6 @@ namespace cfnat.win.gui
                 string 有效延迟 = textBox2.Text;
                 string 服务端口 = textBox5.Text;
                 string 开机启动 = checkBox1.Checked.ToString();
-                timer2.Enabled = true;
                 notifyIcon.Icon = Properties.Resources.going;
                 notifyIcon.Text = $"CFnat Windows GUI: 运行中\n数据中心: {数据中心}\n有效延迟: {有效延迟}\n服务端口: {服务端口}";
                 // 保存到 cfnat.ini
@@ -120,7 +128,6 @@ namespace cfnat.win.gui
             }
             else
             {
-                timer2.Enabled = false;
                 notifyIcon.Icon = this.Icon;
                 notifyIcon.Text = "CFnat Windows GUI: 未运行";
                 await StopCommandAsync();
@@ -494,33 +501,11 @@ namespace cfnat.win.gui
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            if(checkBox1.Checked == true)
+            if(checkBox1.Checked)
             {
                 button1_Click(sender, e);
             }
-            else
-            {
-                Show();
-            }
             timer1.Enabled = false;
         }
-
-        private void timer2_Tick(object sender, EventArgs e)
-        {
-            if(timer2.Interval == 10)
-            {
-                //亮起时长：400毫秒
-                timer2.Interval = 3141;
-                notifyIcon.Icon = Properties.Resources.going;
-                outputTextBox.SelectionStart = outputTextBox.Text.Length;
-            }
-            else
-            {
-                //熄灭时长：200毫秒
-                timer2.Interval = 10;
-                notifyIcon.Icon = this.Icon;
-            }
-        }
-
     }
 }
