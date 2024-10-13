@@ -25,9 +25,16 @@ CFnat-Windows-GUI项目仅供教育、研究和安全测试目的而设计和开
 
 ![GUI](./gui.png)
 
+## 经验之谈
+1. **CFnat**和**梯子**在**同一台设备上运行**时使用**本地服务IP:端口**连接。
+2. **CFnat**和**梯子**分别处在**同一局域网内的两台设备上运行**时使用**内网服务IP:端口**连接。
+3. 如果你是使用 [cmliu/edgetunnel](https://github.com/cmliu/edgetunnel) 的节点，可将**本地服务IP:端口**和**内网服务IP:端口**都添加至`ADD`变量里，直接订阅食用即可
+4. **移动/广电**用户设置数据中心`HKG`直接起飞！**电信/联通**用户设置`SJC,LAX`！
+
 ## GUI文件结构
 ```shell
 CFnat Windows GUI.exe    #GUI本体
+cfnat.ini                #GUI配置文件
 cfnat-windows-386.exe    #cfnat x86_32位 原程序本体
 cfnat-windows-amd64.exe  #cfnat x86_64位 原程序本体
 cfnat-windows-arm.exe    #cfnat arm_32位 原程序本体
@@ -39,5 +46,8 @@ ips-v6.txt               #IPv6库
 locations.json           #CF数据中心json文件
 ```
 
+## Star 星星走起
+[![Stargazers over time](https://starchart.cc/cmliu/CFnat-Windows-GUI.svg?variant=adaptive)](https://starchart.cc/cmliu/CFnat-Windows-GUI)
+
 # 致谢
-我自己的脑洞，ChatGPT
+我自己的脑洞，ChatGPT，[CF中转IP 频道主](https://t.me/CF_NAT/38840)
