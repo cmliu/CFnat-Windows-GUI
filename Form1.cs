@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using System.IO;
 using Microsoft.Win32;
 using System.Drawing;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 
 
 namespace cfnat.win.gui
@@ -25,6 +26,7 @@ namespace cfnat.win.gui
             this.Load += Form1_Load; // 添加这一行来确保 Load 事件被处理
             comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox2.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBox3.DropDownStyle = ComboBoxStyle.DropDownList;
             GetLocalIPs();
 
             // 设置窗体为固定大小
@@ -36,7 +38,7 @@ namespace cfnat.win.gui
             // 初始化 NotifyIcon（系统托盘图标）
             notifyIcon = new NotifyIcon();
             notifyIcon.Icon = this.Icon;
-            notifyIcon.Text = "CFnat Windows GUI: 未运行";
+            notifyIcon.Text = "CFnat: 未运行";
             notifyIcon.Visible = true;
             notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
 
@@ -108,6 +110,7 @@ namespace cfnat.win.gui
         {
             if (button1.Text == "启动")
             {
+                checkBox4.Checked = true;
                 outputTextBox.Clear();
                 button1.Text = "停止";
                 string 系统 = comboBox1.Text;
@@ -116,20 +119,39 @@ namespace cfnat.win.gui
                 string 有效延迟 = textBox2.Text;
                 string 服务端口 = textBox5.Text;
                 string 开机启动 = checkBox1.Checked.ToString();
+                //高级设置参数
+                string IP类型 = "4";
+                if (comboBox3.Text == "IPv6") IP类型 = "6";
+                string 目标端口 = textBox6.Text;
+                string 随机IP = "true";
+                string tls = "true";
+                if (checkBox2.Checked == false)  随机IP = "false";
+                string tls描述 = "TLS";
+                if (checkBox3.Checked == false)
+                {
+                    tls = "false";
+                    tls描述 = "noTLS";
+                }
+                string 有效IP = textBox7.Text;
+                string 负载IP = textBox8.Text;
+                string 并发请求 = textBox9.Text;
+                string 检查的域名地址 = textBox10.Text;
+
+                string 数据中心描述 = 数据中心;
+                if (数据中心描述.Length > 11) 数据中心描述 = 数据中心.Substring(0,3) + "...";
                 notifyIcon.Icon = Properties.Resources.going;
-                notifyIcon.Text = $"CFnat Windows GUI: 运行中\n数据中心: {数据中心}\n有效延迟: {有效延迟}\n服务端口: {服务端口}";
+                string 状态栏描述 = $"CFnat: 运行中\nC: {数据中心描述}\nD: {有效延迟}ms\nP: {服务端口}\nIPv{IP类型} {目标端口} {tls描述}";
+                if (状态栏描述.Length > 63) 状态栏描述 = 状态栏描述.Substring(0, 60) + "...";
+                notifyIcon.Text = 状态栏描述;
                 // 保存到 cfnat.ini
-                SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动);
-                await RunCommandAsync($"cfnat-{系统}-{架构}.exe -colo={数据中心} -port=443 -delay={有效延迟} -ips=4 -addr=\"0.0.0.0:{服务端口}\"");
-                // 将光标移动到文本的末尾
-                outputTextBox.SelectionStart = outputTextBox.Text.Length;
-                // 滚动到光标位置
-                outputTextBox.ScrollToCaret();
+                SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动, IP类型, 目标端口, tls, 随机IP, 有效IP, 负载IP, 并发请求, 检查的域名地址);
+                await RunCommandAsync($"cfnat-{系统}-{架构}.exe -colo={数据中心} -delay={有效延迟} -addr=\"0.0.0.0:{服务端口}\" -ips={IP类型} -port={目标端口} -tls={tls} -random={随机IP} -ipnum={有效IP} -num={负载IP} -task={并发请求} -domain=\"{检查的域名地址}\"");
             }
             else
             {
+                checkBox4.Checked = false;
                 notifyIcon.Icon = this.Icon;
-                notifyIcon.Text = "CFnat Windows GUI: 未运行";
+                notifyIcon.Text = "CFnat: 未运行";
                 await StopCommandAsync();
                 button1.Text = "启动";
             }
@@ -156,6 +178,10 @@ namespace cfnat.win.gui
                         this.Invoke(new Action(() =>
                         {
                             outputTextBox.AppendText(e.Data + Environment.NewLine);
+                            if (checkBox4.Checked == true) {
+                                outputTextBox.SelectionStart = outputTextBox.Text.Length;
+                                outputTextBox.ScrollToCaret();
+                            }
                         }));
                     }
                 };
@@ -325,6 +351,26 @@ namespace cfnat.win.gui
             ValidateNumericRange(textBox2);
         }
 
+        private void textBox6_Leave(object sender, EventArgs e)
+        {
+            ValidateNumericRange(textBox6);
+        }
+
+        private void textBox7_Leave(object sender, EventArgs e)
+        {
+            ValidateNumericRange(textBox7);
+        }
+
+        private void textBox8_Leave(object sender, EventArgs e)
+        {
+            ValidateNumericRange(textBox8);
+        }
+
+        private void textBox9_Leave(object sender, EventArgs e)
+        {
+            ValidateNumericRange(textBox9);
+        }
+
         private void ValidateNumericRange(TextBox textBox)
         {
             // 尝试将输入的文本转换为数字
@@ -343,17 +389,25 @@ namespace cfnat.win.gui
                 textBox.Focus(); // 重新聚焦到文本框
             }
         }
-
-        private void SaveToIni(string sys, string arch, string colo, string delay, string port, string on)
+        //SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动);
+        private void SaveToIni(string 系统, string 架构, string 数据中心, string 有效延迟, string 服务端口, string 开机启动, string IP类型, string 目标端口, string tls, string  随机IP, string 有效IP, string 负载IP, string 并发请求, string 检查的域名地址)
         {
             using (StreamWriter writer = new StreamWriter("cfnat.ini"))
             {
-                writer.WriteLine($"sys={sys}");
-                writer.WriteLine($"arch={arch}");
-                writer.WriteLine($"colo={colo}");
-                writer.WriteLine($"delay={delay}");
-                writer.WriteLine($"port={port}");
-                writer.WriteLine($"on={on}");
+                writer.WriteLine($"sys={系统}");
+                writer.WriteLine($"arch={架构}");
+                writer.WriteLine($"colo={数据中心}");
+                writer.WriteLine($"delay={有效延迟}");
+                writer.WriteLine($"addr={服务端口}");
+                writer.WriteLine($"on={开机启动}");
+                writer.WriteLine($"ips={IP类型}");
+                writer.WriteLine($"port={目标端口}");
+                writer.WriteLine($"tls={tls}");
+                writer.WriteLine($"random={随机IP}");
+                writer.WriteLine($"ipnum={有效IP}");
+                writer.WriteLine($"num={负载IP}");
+                writer.WriteLine($"task={并发请求}");
+                writer.WriteLine($"domain={检查的域名地址}");
             }
         }
 
@@ -393,18 +447,36 @@ namespace cfnat.win.gui
                                     case "delay":
                                         textBox2.Text = value;
                                         break;
-                                    case "port":
+                                    case "addr":
                                         textBox5.Text = value;
                                         break;
                                     case "on":
-                                        if(value == "True")
-                                        {
-                                            checkBox1.Checked = true;
-                                        }
-                                        else
-                                        {
-                                            checkBox1.Checked = false;
-                                        }
+                                        if(value.ToLower() == "true") checkBox1.Checked = true;
+                                        else checkBox1.Checked = false;
+                                        break;
+                                    case "ips":
+                                        if (value.ToLower() == "4") comboBox3.Text = "IPv4";
+                                        else comboBox3.Text = "IPv6";
+                                        break;
+                                    case "tls":
+                                        if (value.ToLower() == "true") checkBox3.Checked = true;
+                                        else checkBox3.Checked = false;
+                                        break;
+                                    case "random":
+                                        if (value.ToLower() == "true") checkBox2.Checked = true;
+                                        else checkBox2.Checked = false;
+                                        break;
+                                    case "ipnum":
+                                        textBox7.Text = value;
+                                        break;
+                                    case "num":
+                                        textBox8.Text = value;
+                                        break;
+                                    case "task":
+                                        textBox9.Text = value;
+                                        break;
+                                    case "domain":
+                                        textBox10.Text = value;
                                         break;
                                     default:
                                         // 可以添加日志或处理未识别的键
@@ -456,7 +528,18 @@ namespace cfnat.win.gui
             string 有效延迟 = textBox2.Text;
             string 服务端口 = textBox5.Text;
             string 开机启动 = checkBox1.Checked.ToString();
-            SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动);
+            string IP类型 = "4";
+            if (comboBox3.Text == "IPv6") IP类型 = "6";
+            string 目标端口 = textBox6.Text;
+            string 随机IP = "true";
+            string tls = "true";
+            if (checkBox2.Checked == false) 随机IP = "false";
+            if (checkBox3.Checked == false) tls = "false";
+            string 有效IP = textBox7.Text;
+            string 负载IP = textBox8.Text;
+            string 并发请求 = textBox9.Text;
+            string 检查的域名地址 = textBox10.Text;
+            SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动, IP类型, 目标端口, tls, 随机IP, 有效IP, 负载IP, 并发请求, 检查的域名地址);
             // 判断是否需要添加或移除启动项
             if (checkBox1.Checked)
             {
@@ -501,11 +584,63 @@ namespace cfnat.win.gui
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            if(checkBox1.Checked)
+            button3_Click(sender, e);
+            if (checkBox1.Checked)
             {
                 button1_Click(sender, e);
             }
             timer1.Enabled = false;
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            if (button3.Text== "高级设置∨") {
+                groupBox3.Visible = true; 
+                button3.Text = "高级设置∧";
+                this.Height = 546;
+            }
+            else
+            {
+                groupBox3.Visible = false;
+                button3.Text = "高级设置∨";
+                this.Height = 463;
+            }
+        }
+
+        private void textBox10_Leave(object sender, EventArgs e)
+        {
+            if (textBox10.Text.Length >= 8)
+            {
+                string first8Chars = textBox10.Text.Substring(0, 8).ToLower();
+                if (first8Chars == "https://")
+                {
+                    // 截取 "https://" 之后的内容，并赋值给 textBox10.Text
+                    textBox10.Text = textBox10.Text.Substring(8);
+                }
+                string first7Chars = textBox10.Text.Substring(0, 7).ToLower();
+                if (first7Chars == "http://")
+                {
+                    // 截取 "https://" 之后的内容，并赋值给 textBox10.Text
+                    textBox10.Text = textBox10.Text.Substring(7);
+                }
+            }
+        }
+
+        private void timer2_Tick(object sender, EventArgs e)
+        {
+            if(outputTextBox.Text.Length > 1047483647) {
+                button2_Click(sender, e);
+            }
+        }
+
+        private void outputTextBox_MouseDown(object sender, MouseEventArgs e)
+        {
+            checkBox4.Checked = false;
+        }
+
+        private void outputTextBox_MouseLeave(object sender, EventArgs e)
+        {
+            checkBox4.Checked = true;
         }
     }
 }
