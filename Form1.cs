@@ -33,7 +33,7 @@ namespace cfnat.win.gui
             comboBox3.DropDownStyle = ComboBoxStyle.DropDownList;
             GetLocalIPs();
 
-            this.Height = 575;
+            this.Height = 492;
             this.Width = 816;
 
             // 设置窗体为固定大小
@@ -719,6 +719,7 @@ namespace cfnat.win.gui
                 button1_Click(sender, e);
             }
             timer1.Enabled = false;
+            this.Height = 492;
         }
 
         private void button3_Click(object sender, EventArgs e)
