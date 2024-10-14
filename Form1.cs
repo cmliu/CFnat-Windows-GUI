@@ -9,6 +9,8 @@ using System.IO;
 using Microsoft.Win32;
 using System.Drawing;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
+using System.Linq;
+using System.Collections.Generic;
 
 
 namespace cfnat.win.gui
@@ -18,6 +20,8 @@ namespace cfnat.win.gui
         private Process cmdProcess;
         private NotifyIcon notifyIcon;
         private bool isExitingDueToDisclaimer = false;
+        private List<Process> cmdProcesses = new List<Process>(); // 用来保存所有启动的cmd进程
+        int 执行开关 = 0;
         public Form1()
         {
             InitializeComponent();
@@ -28,6 +32,9 @@ namespace cfnat.win.gui
             comboBox2.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBox3.DropDownStyle = ComboBoxStyle.DropDownList;
             GetLocalIPs();
+
+            this.Height = 575;
+            this.Width = 816;
 
             // 设置窗体为固定大小
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
@@ -110,9 +117,14 @@ namespace cfnat.win.gui
         {
             if (button1.Text == "启动")
             {
+                执行开关 = 1;
                 checkBox4.Checked = true;
                 outputTextBox.Clear();
                 button1.Text = "停止";
+                groupBox3.Enabled = false;
+                textBox1.Enabled = false;
+                textBox2.Enabled = false;
+                textBox5.ReadOnly = true;
                 string 系统 = comboBox1.Text;
                 string 架构 = comboBox2.Text;
                 string 数据中心 = textBox1.Text;
@@ -145,100 +157,202 @@ namespace cfnat.win.gui
                 notifyIcon.Text = 状态栏描述;
                 // 保存到 cfnat.ini
                 SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动, IP类型, 目标端口, tls, 随机IP, 有效IP, 负载IP, 并发请求, 检查的域名地址);
+                if (button4.Enabled == true)
+                {
+                    log($"生成 IPv{IP类型}缓存 IP库");
+                    await RunCommandAsync($"colo-windows-{架构}.exe -ips={IP类型} -random={随机IP}  -task={并发请求}", "colo");
+                    if (执行开关 != 0)
+                    {
+                        string[] 数据中心数组 = textBox1.Text.Split(',');
+
+                        // 检测 colo/ip.csv 文件是否存在
+                        // 获取程序当前目录并拼接相对路径
+                        string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "colo", "ip.csv");
+
+                        if (File.Exists(filePath))
+                        {
+                            StringBuilder IP库 = new StringBuilder(); // 用于存储符合条件的IP
+
+                            // 读取 ip.csv 文件的内容
+                            string[] lines = File.ReadAllLines(filePath);
+
+                            // 跳过第一行（标题行），并逐行处理数据
+                            foreach (var line in lines.Skip(1)) // Skip(1) 跳过标题行
+                            {
+                                string[] columns = line.Split(','); // 按逗号分割列
+                                /*
+                               if (columns.Length >= 5)
+                               {
+                                   string ip地址 = columns[0];    // IP地址
+                                   string 数据中心名 = columns[1]; // 数据中心
+
+                                   // 如果该IP的 数据中心 在数据中心数组中
+                                   if (数据中心数组.Contains(数据中心名))
+                                   {
+                                       IP库.AppendLine(ip地址); // 将符合条件的IP添加到IP库
+                                   }
+                               }
+                               */
+                                IP库.AppendLine(columns[0]); // 将符合条件的IP添加到IP库
+                            }
+
+                            // 将IP库内容写入到程序目录的 ips-v4.txt 文件中
+                            string outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"ips-v{IP类型}.txt");
+                            File.WriteAllText(outputPath, IP库.ToString());
+
+                            log("IP库已成功写入到 ips-v4.txt 文件中。");
+                        }
+                        else
+                        {
+                            log("文件 colo/ip.csv 不存在。");
+                        }
+                    }
+                }
                 await RunCommandAsync($"cfnat-{系统}-{架构}.exe -colo={数据中心} -delay={有效延迟} -addr=\"0.0.0.0:{服务端口}\" -ips={IP类型} -port={目标端口} -tls={tls} -random={随机IP} -ipnum={有效IP} -num={负载IP} -task={并发请求} -domain=\"{检查的域名地址}\"");
             }
             else
             {
+                执行开关 = 0;
                 checkBox4.Checked = false;
                 notifyIcon.Icon = this.Icon;
                 notifyIcon.Text = "CFnat: 未运行";
                 await StopCommandAsync();
+                await StopCommandAsync();
                 button1.Text = "启动";
+                groupBox3.Enabled = true;
+                textBox1.Enabled = true;
+                textBox2.Enabled = true;
+                textBox5.ReadOnly = false;
             }
         }
 
-        private async Task RunCommandAsync(string command)
+        private async Task RunCommandAsync(string command, string workingDirectory = "")
         {
-            try
-            {
-                cmdProcess = new Process();
-                cmdProcess.StartInfo.FileName = "cmd.exe";
-                cmdProcess.StartInfo.Arguments = "/c chcp 65001 & " + command;
-                cmdProcess.StartInfo.RedirectStandardOutput = true;
-                cmdProcess.StartInfo.RedirectStandardError = true;
-                cmdProcess.StartInfo.UseShellExecute = false;
-                cmdProcess.StartInfo.CreateNoWindow = true;
-                cmdProcess.StartInfo.StandardOutputEncoding = Encoding.UTF8;
-                cmdProcess.StartInfo.StandardErrorEncoding = Encoding.UTF8;
-
-                cmdProcess.OutputDataReceived += (s, e) =>
+            if (执行开关 != 0) {
+                progressBar1.Value = 0;
+                comboBox1.Enabled = false;
+                comboBox2.Enabled = false;
+                try
                 {
-                    if (!string.IsNullOrEmpty(e.Data))
-                    {
-                        this.Invoke(new Action(() =>
-                        {
-                            outputTextBox.AppendText(e.Data + Environment.NewLine);
-                            if (checkBox4.Checked == true) {
-                                outputTextBox.SelectionStart = outputTextBox.Text.Length;
-                                outputTextBox.ScrollToCaret();
-                            }
-                        }));
-                    }
-                };
+                    cmdProcess = new Process();
+                    cmdProcess.StartInfo.FileName = "cmd.exe";
+                    cmdProcess.StartInfo.Arguments = "/c chcp 65001 & " + command;
+                    cmdProcess.StartInfo.RedirectStandardOutput = true;
+                    cmdProcess.StartInfo.RedirectStandardError = true;
+                    cmdProcess.StartInfo.UseShellExecute = false;
+                    cmdProcess.StartInfo.CreateNoWindow = true;
+                    cmdProcess.StartInfo.StandardOutputEncoding = Encoding.UTF8;
+                    cmdProcess.StartInfo.StandardErrorEncoding = Encoding.UTF8;
 
-                cmdProcess.ErrorDataReceived += (s, e) =>
+                    if (!string.IsNullOrEmpty(workingDirectory))
+                    {
+                        cmdProcess.StartInfo.WorkingDirectory = workingDirectory;
+                    }
+
+                    cmdProcess.OutputDataReceived += (s, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(e.Data))
+                        {
+                            this.Invoke(new Action(() =>
+                            {
+                                string 进度内容 = e.Data + Environment.NewLine;
+                                outputTextBox.AppendText(进度内容);
+
+                                if (进度内容.Contains("已完成: ") && 进度内容.Contains("%"))
+                                {
+                                    string[] parts = 进度内容.Split(' ');
+                                    foreach (string part in parts)
+                                    {
+                                        if (part.Contains("%"))
+                                        {
+                                            string percentageString = part.Replace("%", "");
+                                            if (double.TryParse(percentageString, out double percentage))
+                                            {
+                                                int newValue = (int)percentage;
+                                                if (newValue > progressBar1.Value)  progressBar1.Value = newValue;
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (checkBox4.Checked == true)
+                                {
+                                    outputTextBox.SelectionStart = outputTextBox.Text.Length;
+                                    outputTextBox.ScrollToCaret();
+                                }
+                            }));
+                        }
+                    };
+
+                    cmdProcess.ErrorDataReceived += (s, e) =>
+                    {
+                        if (!string.IsNullOrEmpty(e.Data))
+                        {
+                            this.Invoke(new Action(() =>
+                            {
+                                outputTextBox.AppendText(e.Data + Environment.NewLine);
+                            }));
+                        }
+                    };
+
+                    cmdProcess.Start();
+                    cmdProcess.BeginOutputReadLine();
+                    cmdProcess.BeginErrorReadLine();
+
+                    // 将进程添加到进程列表中
+                    cmdProcesses.Add(cmdProcess);
+
+                    await Task.Run(() => cmdProcess.WaitForExit());
+                }
+                catch (Exception ex)
                 {
-                    if (!string.IsNullOrEmpty(e.Data))
-                    {
-                        this.Invoke(new Action(() =>
-                        {
-                            outputTextBox.AppendText("ERROR: " + e.Data + Environment.NewLine);
-                        }));
-                    }
-                };
-
-                cmdProcess.Start();
-                cmdProcess.BeginOutputReadLine();
-                cmdProcess.BeginErrorReadLine();
-
-                await Task.Run(() => cmdProcess.WaitForExit());
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("执行命令时发生错误: " + ex.Message);
+                    MessageBox.Show("执行命令时发生错误: " + ex.Message);
+                }
+                comboBox1.Enabled = true;
+                comboBox2.Enabled = true;
             }
         }
 
         private async Task StopCommandAsync()
         {
-            if (cmdProcess != null && !cmdProcess.HasExited)
+            if (cmdProcesses.Count > 0)
             {
-                try
+                foreach (var process in cmdProcesses)
                 {
-                    // 发送Ctrl+C信号
-                    bool result = AttachConsole((uint)cmdProcess.Id);
-                    SetConsoleCtrlHandler(null, true);
-                    GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
-
-                    // 等待进程退出，最多等待5秒
-                    await Task.Run(() => cmdProcess.WaitForExit(5000));
-
-                    if (!cmdProcess.HasExited)
+                    if (process != null && !process.HasExited)
                     {
-                        cmdProcess.Kill(); // 如果5秒后进程仍未退出，则强制终止
+                        try
+                        {
+                            // 发送Ctrl+C信号
+                            bool result = AttachConsole((uint)process.Id);
+                            SetConsoleCtrlHandler(null, true);
+                            GenerateConsoleCtrlEvent(CTRL_C_EVENT, 0);
+
+                            // 等待进程退出，最多等待5秒
+                            await Task.Run(() => process.WaitForExit(5000));
+
+                            if (!process.HasExited)
+                            {
+                                process.Kill(); // 如果5秒后进程仍未退出，则强制终止
+                            }
+
+                            SetConsoleCtrlHandler(null, false);
+                            FreeConsole();
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show("停止命令时发生错误: " + ex.Message);
+                        }
                     }
-
-                    SetConsoleCtrlHandler(null, false);
-                    FreeConsole();
-
-                    cmdProcess.Close();
-                    cmdProcess = null;
+                    process.Close();
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("停止命令时发生错误: " + ex.Message);
-                }
+
+                // 清空进程列表
+                cmdProcesses.Clear();
             }
+            comboBox1.Enabled = true;
+            comboBox2.Enabled = true;
+            progressBar1.Value = 0;
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -261,7 +375,7 @@ namespace cfnat.win.gui
                 comboBox2.Items.Add("arm");
                 comboBox2.Items.Add("arm64");
                 comboBox2.Text = "amd64";
-                this.Height = 463;
+                this.Height = 492; 
             }
             else
             {
@@ -271,8 +385,9 @@ namespace cfnat.win.gui
                 comboBox2.Items.Add("386");
                 comboBox2.Items.Add("amd64");
                 comboBox2.Text = "amd64";
-                this.Height = 493;
+                this.Height = 522;
             }
+
         }
         private void textBox1_Leave(object sender, EventArgs e)
         {
@@ -502,7 +617,7 @@ namespace cfnat.win.gui
             else
             {
                 // 文件不存在，可以给用户反馈
-                string 免责声明 = "CFnat-Windows-GUI项目仅供教育、研究和安全测试目的而设计和开发。本项目旨在为安全研究人员、学术界人士及技术爱好者提供一个探索和实践网络通信技术的工具。\r\n在下载和使用本项目代码时，使用者必须严格遵守其所适用的法律和规定。使用者有责任确保其行为符合所在地区的法律框架、规章制度及其他相关规定。\r\n\r\n使用条款\r\n\r\n教育与研究用途：本软件仅可用于网络技术和编程领域的学习、研究和安全测试。\r\n禁止非法使用：严禁将CFnat-Windows-GUI用于任何非法活动或违反使用者所在地区法律法规的行为。\r\n使用时限：基于学习和研究目的，建议用户在完成研究或学习后，或在安装后的24小时内，删除本软件及所有相关文件。\r\n免责声明：CFnat-Windows-GUI的创建者和贡献者不对因使用或滥用本软件而导致的任何损害或法律问题负责。\r\n用户责任：用户对使用本软件的方式以及由此产生的任何后果完全负责。\r\n无技术支持：本软件的创建者不提供任何技术支持或使用协助。\r\n知情同意：使用CFnat-Windows-GUI即表示您已阅读并理解本免责声明，并同意受其条款的约束。\r\n\r\n请记住：本软件的主要目的是促进学习、研究和安全测试。创作者不支持或认可任何其他用途。使用者应当在合法和负责任的前提下使用本工具。\r\n\r\n同意以上条款请点击\"是 / Yes\"，否则程序将退出。";
+                string 免责声明 = "CFnat-Windows-GUI 项目仅供教育、研究和安全测试目的而设计和开发。本项目旨在为安全研究人员、学术界人士及技术爱好者提供一个探索和实践网络通信技术的工具。\r\n在下载和使用本项目代码时，使用者必须严格遵守其所适用的法律和规定。使用者有责任确保其行为符合所在地区的法律框架、规章制度及其他相关规定。\r\n\r\n使用条款\r\n\r\n教育与研究用途：本软件仅可用于网络技术和编程领域的学习、研究和安全测试。\r\n禁止非法使用：严禁将 CFnat-Windows-GUI 用于任何非法活动或违反使用者所在地区法律法规的行为。\r\n使用时限：基于学习和研究目的，建议用户在完成研究或学习后，或在安装后的24小时内，删除本软件及所有相关文件。\r\n免责声明：CFnat-Windows-GUI 的创建者和贡献者不对因使用或滥用本软件而导致的任何损害或法律问题负责。\r\n用户责任：用户对使用本软件的方式以及由此产生的任何后果完全负责。\r\n无技术支持：本软件的创建者不提供任何技术支持或使用协助。\r\n知情同意：使用 CFnat-Windows-GUI 即表示您已阅读并理解本免责声明，并同意受其条款的约束。\r\n\r\n请记住：本软件的主要目的是促进学习、研究和安全测试。创作者不支持或认可任何其他用途。使用者应当在合法和负责任的前提下使用本工具。\r\n\r\n同意以上条款请点击\"是 / Yes\"，否则程序将退出。";
 
                 // 显示带有 "同意" 和 "拒绝" 选项的对话框
                 DialogResult result = MessageBox.Show(免责声明, "CFnat-Windows-GUI 免责声明", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
@@ -597,6 +712,7 @@ namespace cfnat.win.gui
 
         private void timer1_Tick(object sender, EventArgs e)
         {
+            Check_COLO(sender, e);
             button3_Click(sender, e);
             if (checkBox1.Checked)
             {
@@ -610,15 +726,17 @@ namespace cfnat.win.gui
             if (button3.Text== "高级设置∨") {
                 groupBox3.Visible = true; 
                 button3.Text = "高级设置∧";
-                //this.Height = 546;
-                this.Height += 83; 
+                //this.Height = 492;
+                this.Height += 83;
+                progressBar1.Location = new Point(12, 502);
             }
             else
             {
                 groupBox3.Visible = false;
                 button3.Text = "高级设置∨";
-                //this.Height = 463;
+                //this.Height = 575;
                 this.Height -= 83;
+                progressBar1.Location = new Point(12, 502-83);
             }
         }
 
@@ -656,6 +774,119 @@ namespace cfnat.win.gui
         private void outputTextBox_MouseLeave(object sender, EventArgs e)
         {
             checkBox4.Checked = true;
+        }
+
+        private void Check_COLO(object sender, EventArgs e)
+        {
+            // 获取当前程序的目录
+            string currentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            string coloFolder = Path.Combine(currentDirectory, "colo");
+
+            // 检查是否存在colo文件夹
+            if (Directory.Exists(coloFolder))
+            {
+                string 架构 = comboBox2.Text;
+                // 定义要检查的文件路径
+                string coloExe = Path.Combine(coloFolder, $"colo-windows-{架构}.exe");
+                string ipsV4 = Path.Combine(coloFolder, "ips-v4.txt");
+                string ipsV6 = Path.Combine(coloFolder, "ips-v6.txt");
+                string locationsJson = Path.Combine(coloFolder, "locations.json");
+
+                // 检查是否存在所需的4个文件
+                if (File.Exists(coloExe) && File.Exists(ipsV4) && File.Exists(ipsV6) && File.Exists(locationsJson))
+                {
+                    button4.Enabled = true;
+                    //log($"colo-windows-{架构}.exe 准备就绪！");
+                    //MessageBox.Show("所有文件均存在！");
+                }
+                else
+                {
+                    button4.Enabled = false;
+                    // 具体提示哪个文件不存在
+                    string missingFiles = "";
+                    if (!File.Exists(coloExe)) missingFiles += $"colo-windows-{架构}.exe";
+                    if (!File.Exists(ipsV4)) missingFiles += "ips-v4.txt ";
+                    if (!File.Exists(ipsV6)) missingFiles += "ips-v6.txt ";
+                    if (!File.Exists(locationsJson)) missingFiles += "locations.json ";
+                    //log("以下文件不存在: " + missingFiles);
+                    //MessageBox.Show("以下文件不存在: " + missingFiles);
+                }
+            }
+            else
+            {
+                button4.Enabled = false;
+                //log("colo文件夹不存在！");
+                //MessageBox.Show("colo文件夹不存在！");
+            }
+        }
+
+        private void log(string text)
+        {
+            outputTextBox.AppendText(text+"\r\n");
+        }
+
+        private async void button4_Click(object sender, EventArgs e)
+        {
+            if (button4.Text == "缓存IP库") { 
+                button4.Text= "停止";
+                button1.Enabled = false;
+                log("执行colo生成缓存IP库");
+                string 架构 = comboBox2.Text;
+                string IP类型 = "4";
+                if (comboBox3.Text == "IPv6") IP类型 = "6";
+                string 随机IP = "true";
+                if (checkBox2.Checked == false) 随机IP = "false";
+                string 并发请求 = textBox9.Text;
+                log($"生成 {textBox1.Text}缓存 IP库");
+                await RunCommandAsync($"colo-windows-{架构}.exe -ips={IP类型} -random={随机IP}  -task={并发请求}","colo");
+                string[] 数据中心数组 = textBox1.Text.Split(',');
+
+                // 检测 colo/ip.csv 文件是否存在
+                // 获取程序当前目录并拼接相对路径
+                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "colo", "ip.csv");
+
+                if (File.Exists(filePath))
+                {
+                    StringBuilder IP库 = new StringBuilder(); // 用于存储符合条件的IP
+
+                    // 读取 ip.csv 文件的内容
+                    string[] lines = File.ReadAllLines(filePath);
+
+                    // 跳过第一行（标题行），并逐行处理数据
+                    foreach (var line in lines.Skip(1)) // Skip(1) 跳过标题行
+                    {
+                        string[] columns = line.Split(','); // 按逗号分割列
+                        if (columns.Length >= 5)
+                        {
+                            string ip地址 = columns[0];    // IP地址
+                            string 数据中心名 = columns[1]; // 数据中心
+
+                            // 如果该IP的 数据中心 在数据中心数组中
+                            if (数据中心数组.Contains(数据中心名))
+                            {
+                                IP库.AppendLine(ip地址); // 将符合条件的IP添加到IP库
+                            }
+                        }
+                    }
+
+                    // 将IP库内容写入到程序目录的 ips-v4.txt 文件中
+                    string outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"ips-v{IP类型}.txt");
+                    File.WriteAllText(outputPath, IP库.ToString());
+
+                    log("IP库已成功写入到 ips-v4.txt 文件中。");
+                }
+                else
+                {
+                    log("文件 colo/ip.csv 不存在。");
+                }
+                button4.Text = "缓存IP库";
+            }
+            else {
+                button4.Text = "缓存IP库";
+                button1.Enabled = true;
+                log("停止colo生成缓存IP库");
+                await StopCommandAsync();
+            }
         }
     }
 }
