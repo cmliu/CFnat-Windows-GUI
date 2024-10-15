@@ -59,20 +59,30 @@ CFnat-Windows-GUI项目仅供教育、研究和安全测试目的而设计和开
 2. **CFnat**和**梯子**分别处在**同一局域网内的两台设备上运行**时使用**内网服务IP:端口**连接。
 3. 如果你是使用 [cmliu/edgetunnel](https://github.com/cmliu/edgetunnel) 的节点，可将**本地服务IP:端口**和**内网服务IP:端口**都添加至`ADD`变量里，直接订阅食用即可
 4. **移动/广电**用户设置数据中心`HKG`直接起飞！**电信/联通**用户设置`SJC,LAX`！
+5. 在跑过一次优选之后，可在`colo`文件夹里可以看到`ip.csv`扫描结果, 里面就能看到你的当前网络网络环境下能跑出来的所有数据中心！
 
 ## GUI文件结构
 ```shell
-CFnat Windows GUI.exe    #GUI本体
-cfnat.ini                #GUI配置文件
-cfnat-windows-386.exe    #cfnat x86_32位 原程序本体
-cfnat-windows-amd64.exe  #cfnat x86_64位 原程序本体
-cfnat-windows-arm.exe    #cfnat arm_32位 原程序本体
-cfnat-windows-arm64.exe  #cfnat arm_64位 原程序本体
-cfnat-windows7-386.exe   #cfnat Win7_x86_32位 原程序本体 Win7专用
-cfnat-windows7-amd64.exe #cfnat Win7_x86_64位 原程序本体 Win7专用
-ips-v4.txt               #IPv4库
-ips-v6.txt               #IPv6库
-locations.json           #CF数据中心json文件
+CFnat Windows GUI.exe      # GUI本体
+cfnat.ini                  # GUI配置文件
+cfnat-windows-386.exe      # cfnat x86_32位 原程序本体
+cfnat-windows-amd64.exe    # cfnat x86_64位 原程序本体
+cfnat-windows-arm.exe      # cfnat arm_32位 原程序本体
+cfnat-windows-arm64.exe    # cfnat arm_64位 原程序本体
+cfnat-windows7-386.exe     # cfnat Win7_x86_32位 原程序本体 Win7专用
+cfnat-windows7-amd64.exe   # cfnat Win7_x86_64位 原程序本体 Win7专用
+colo
+ ├─ colo-windows-386.exe   # colo x86_32位 用于生成缓存IP库
+ ├─ colo-windows-amd64.exe # colo x86_64位 用于生成缓存IP库
+ ├─ colo-windows-arm.exe   # colo arm_32位 用于生成缓存IP库
+ ├─ colo-windows-arm64.exe # colo arm_64位 用于生成缓存IP库
+ ├─ ip.csv                 # colo 扫描结果 用于生成缓存IP库
+ ├─ ips-v4.txt             # IPv4库
+ ├─ ips-v6.txt             # IPv6库
+ └─ locations.json         # CF数据中心json文件
+ips-v4.txt                 # 缓存IPv4库
+ips-v6.txt                 # 缓存IPv6库
+locations.json             # CF数据中心json文件
 ```
 
 ## Star 星星走起
