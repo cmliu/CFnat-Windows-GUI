@@ -33,11 +33,10 @@ namespace cfnat.win.gui
             comboBox3.DropDownStyle = ComboBoxStyle.DropDownList;
             GetLocalIPs();
 
-            this.Height = 492;
+            //this.Height = 492;
             this.Width = 816;
 
             // 设置窗体为固定大小
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.MinimizeBox = true; // 保留最小化功能
             FileVersionInfo myFileVersionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
@@ -387,7 +386,7 @@ namespace cfnat.win.gui
                 comboBox2.Text = "amd64";
                 this.Height = 522;
             }
-
+            进度条坐标修正();
         }
         private void textBox1_Leave(object sender, EventArgs e)
         {
@@ -627,6 +626,15 @@ namespace cfnat.win.gui
                 {
                     // 退出程序
                     Environment.Exit(0); // 立即退出程序
+                } 
+                else
+                {
+                    var version = Environment.OSVersion.Version;
+                    if (version.Major == 6 && version.Minor == 1)
+                    {
+                        Console.WriteLine("当前系统是 Windows 7");
+                        comboBox1.Text = "windows7";
+                    }
                 }
             }
         }
@@ -712,14 +720,15 @@ namespace cfnat.win.gui
 
         private void timer1_Tick(object sender, EventArgs e)
         {
+            timer1.Enabled = false;
             Check_COLO(sender, e);
             button3_Click(sender, e);
             if (checkBox1.Checked)
             {
                 button1_Click(sender, e);
             }
-            timer1.Enabled = false;
             this.Height = 492;
+            进度条坐标修正();
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -729,7 +738,7 @@ namespace cfnat.win.gui
                 button3.Text = "高级设置∧";
                 //this.Height = 492;
                 this.Height += 83;
-                progressBar1.Location = new Point(12, 502);
+                进度条坐标修正();
             }
             else
             {
@@ -737,7 +746,7 @@ namespace cfnat.win.gui
                 button3.Text = "高级设置∨";
                 //this.Height = 575;
                 this.Height -= 83;
-                progressBar1.Location = new Point(12, 502-83);
+                进度条坐标修正();
             }
         }
 
@@ -775,6 +784,11 @@ namespace cfnat.win.gui
         private void outputTextBox_MouseLeave(object sender, EventArgs e)
         {
             checkBox4.Checked = true;
+        }
+
+        private void 进度条坐标修正() {
+            Console.WriteLine("目前进度条坐标:" + progressBar1.Location + "当前窗口坐标" + this.Size.ToString());
+            progressBar1.Location = new Point(13, this.Size.Height-70);
         }
 
         private void Check_COLO(object sender, EventArgs e)
@@ -887,6 +901,17 @@ namespace cfnat.win.gui
                 button1.Enabled = true;
                 log("停止colo生成缓存IP库");
                 await StopCommandAsync();
+            }
+        }
+
+        private void label1_MouseDoubleClick(object sender, MouseEventArgs e)
+        {
+            if (progressBar1.Visible == false)
+            {
+                progressBar1.Visible = true;
+            } else
+            {
+                progressBar1.Visible = false;
             }
         }
     }
