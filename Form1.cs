@@ -845,7 +845,13 @@ namespace cfnat.win.gui
                 string ipsV4 = Path.Combine(coloFolder, "ips-v4.txt");
                 string ipsV6 = Path.Combine(coloFolder, "ips-v6.txt");
                 string locationsJson = Path.Combine(coloFolder, "locations.json");
-
+                string ipCsv = Path.Combine(coloFolder, "ip.csv");
+                if (File.Exists(ipCsv)) 
+                {
+                    button5.Enabled = true;
+                    button5.Visible = true;
+                }
+                
                 // 检查是否存在所需的4个文件
                 if (File.Exists(coloExe) && File.Exists(ipsV4) && File.Exists(ipsV6) && File.Exists(locationsJson))
                 {
@@ -965,5 +971,23 @@ namespace cfnat.win.gui
                 this.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             }
         }
+
+        private ipCsv ipCsvForm;
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            // 如果窗体还没有被实例化，或者已经被关闭，则重新实例化
+            if (ipCsvForm == null || ipCsvForm.IsDisposed)
+            {
+                ipCsvForm = new ipCsv();
+                ipCsvForm.Show();
+            }
+            else
+            {
+                // 如果窗体已经打开，则使其前置
+                ipCsvForm.BringToFront();
+            }
+        }
+
     }
 }
