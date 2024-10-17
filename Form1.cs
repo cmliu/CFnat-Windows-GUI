@@ -357,7 +357,7 @@ namespace cfnat.win.gui
                 comboBox1.Enabled = true;
                 comboBox2.Enabled = true;
             }
-            执行开关 = 0;
+            //执行开关 = 0;
         }
 
         private async Task StopCommandAsync()
