@@ -7,11 +7,8 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using Microsoft.Win32;
-using System.Drawing;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 using System.Linq;
 using System.Collections.Generic;
-using System.Xml.Linq;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
 
@@ -791,40 +788,48 @@ namespace cfnat.win.gui
 
         private async Task CheckGitHubVersionAsync()
         {
-            using (HttpClient client = new HttpClient())
+            try
             {
-                try
+                // 首先检查是否有网络连接
+                if (!IsNetworkAvailable())
                 {
-                    client.DefaultRequestHeaders.UserAgent.ParseAdd("request");
+                    return; // 静默返回，不显示错误
+                }
 
-                    string url = "https://api.github.com/repos/cmliu/CFnat-Windows-GUI/releases/latest";
-                    HttpResponseMessage response = await client.GetAsync(url);
-
-                    if (response.IsSuccessStatusCode)
+                using (HttpClient client = new HttpClient())
+                {
+                    try
                     {
-                        string responseBody = await response.Content.ReadAsStringAsync();
-                        JObject json = JObject.Parse(responseBody);
-                        string latestVersion = json["tag_name"].ToString();
+                        client.DefaultRequestHeaders.UserAgent.ParseAdd("request");
+                        client.Timeout = TimeSpan.FromSeconds(5); // 设置5秒超时
 
-                        if (latestVersion == 版本号)
+                        string url = "https://api.github.com/repos/cmliu/CFnat-Windows-GUI/releases/latest";
+                        HttpResponseMessage response = await client.GetAsync(url);
+
+                        if (response.IsSuccessStatusCode)
                         {
-                            // 版本相同的逻辑处理
-                            Console.WriteLine("已是最新版本！");
-                        }
-                        else
-                        {
-                            // 版本不同的逻辑处理
-                            标题 = "CFnat Windows GUI " + 版本号 + $"  发现新版本: {latestVersion} 请及时更新！";
-                            this.Text = 标题;
-                            Console.WriteLine($"发现新版本: {latestVersion}");
+                            string responseBody = await response.Content.ReadAsStringAsync();
+                            JObject json = JObject.Parse(responseBody);
+                            string latestVersion = json["tag_name"].ToString();
+
+                            if (latestVersion != 版本号)
+                            {
+                                标题 = "CFnat Windows GUI " + 版本号 + $"  发现新版本: {latestVersion} 请及时更新！";
+                                this.Text = 标题;
+                            }
                         }
                     }
+                    catch
+                    {
+                        // 静默处理所有异常（网络错误、超时、JSON解析错误等）
+                        return;
+                    }
                 }
-                catch (Exception ex)
-                {
-                    // 错误处理，比如网络错误等
-                    Console.WriteLine($"Error: {ex.Message}");
-                }
+            }
+            catch
+            {
+                // 静默处理任何其他异常
+                return;
             }
         }
 
@@ -1042,6 +1047,19 @@ namespace cfnat.win.gui
             {
                 // 如果窗体已经打开，则使其前置
                 ipCsvForm.BringToFront();
+            }
+        }
+
+        // 添加检查网络连接的辅助方法
+        private bool IsNetworkAvailable()
+        {
+            try
+            {
+                return NetworkInterface.GetIsNetworkAvailable();
+            }
+            catch
+            {
+                return false; // 如果无法检查网络状态，假设网络不可用
             }
         }
 
