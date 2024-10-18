@@ -133,7 +133,7 @@ namespace cfnat.win.gui
                         数据中心 = s.DataCenter,
                         出现次数 = s.Count,
                         城市 = s.City,
-                        平均网络延迟 = s.AverageLatency.ToString("F2") + " ms",
+                        平均延迟 = s.AverageLatency.ToString("F0") + " ms",
                         最低延迟 = s.MinLatency + " ms"
                     }).ToList();
 

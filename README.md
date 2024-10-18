@@ -84,6 +84,7 @@ ips-v4.txt                 # 缓存IPv4库
 ips-v6.txt                 # 缓存IPv6库
 locations.json             # CF数据中心json文件
 Newtonsoft.Json.dll        # 验证版本信息组件
+Newtonsoft.Json.xml        # 验证版本信息组件
 ```
 
 ## Star 星星走起
