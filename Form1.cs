@@ -11,7 +11,9 @@ using System.Drawing;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 using System.Linq;
 using System.Collections.Generic;
-
+using System.Xml.Linq;
+using System.Net.Http;
+using Newtonsoft.Json.Linq;
 
 namespace cfnat.win.gui
 {
@@ -22,6 +24,10 @@ namespace cfnat.win.gui
         private bool isExitingDueToDisclaimer = false;
         private List<Process> cmdProcesses = new List<Process>(); // 用来保存所有启动的cmd进程
         int 执行开关 = 0;
+        int 心跳 = 0;
+        string 版本号;
+        string 标题;
+        private DateTime 运行时间;
         public Form1()
         {
             InitializeComponent();
@@ -40,7 +46,9 @@ namespace cfnat.win.gui
             this.MaximizeBox = false;
             this.MinimizeBox = true; // 保留最小化功能
             FileVersionInfo myFileVersionInfo = FileVersionInfo.GetVersionInfo(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            this.Text = "CFnat Windows GUI v" + myFileVersionInfo.FileVersion + " TG:CMLiussss BY:CM喂饭 干货满满";
+            版本号 = "v" + myFileVersionInfo.FileVersion;
+            标题 = "CFnat Windows GUI " + 版本号;
+            this.Text = 标题 + " TG:CMLiussss BY:CM喂饭 干货满满";
             // 初始化 NotifyIcon（系统托盘图标）
             notifyIcon = new NotifyIcon();
             notifyIcon.Icon = this.Icon;
@@ -147,6 +155,8 @@ namespace cfnat.win.gui
             if (button1.Text == "启动")
             {
                 执行开关 = 1;
+                运行时间 = DateTime.Now; // 获取当前时间
+                groupBox2.Text = "实时日志  运行时长 00:00:00";
                 checkBox4.Checked = true;
                 outputTextBox.Clear();
                 button1.Text = "停止";
@@ -256,6 +266,7 @@ namespace cfnat.win.gui
             else
             {
                 执行开关 = 0;
+                groupBox2.Text = "实时日志";
                 checkBox4.Checked = false;
                 notifyIcon.Icon = this.Icon;
                 notifyIcon.Text = "CFnat: 未运行";
@@ -765,7 +776,7 @@ namespace cfnat.win.gui
             }
         }
 
-        private void timer1_Tick(object sender, EventArgs e)
+        private async void timer1_Tick(object sender, EventArgs e)
         {
             timer1.Enabled = false;
             Check_COLO(sender, e);
@@ -775,6 +786,46 @@ namespace cfnat.win.gui
                 button1_Click(sender, e);
             }
             this.Height = 492;
+            await CheckGitHubVersionAsync();
+        }
+
+        private async Task CheckGitHubVersionAsync()
+        {
+            using (HttpClient client = new HttpClient())
+            {
+                try
+                {
+                    client.DefaultRequestHeaders.UserAgent.ParseAdd("request");
+
+                    string url = "https://api.github.com/repos/cmliu/CFnat-Windows-GUI/releases/latest";
+                    HttpResponseMessage response = await client.GetAsync(url);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        string responseBody = await response.Content.ReadAsStringAsync();
+                        JObject json = JObject.Parse(responseBody);
+                        string latestVersion = json["tag_name"].ToString();
+
+                        if (latestVersion == 版本号)
+                        {
+                            // 版本相同的逻辑处理
+                            Console.WriteLine("已是最新版本！");
+                        }
+                        else
+                        {
+                            // 版本不同的逻辑处理
+                            标题 = "CFnat Windows GUI " + 版本号 + $"  发现新版本: {latestVersion} 请及时更新！";
+                            this.Text = 标题;
+                            Console.WriteLine($"发现新版本: {latestVersion}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // 错误处理，比如网络错误等
+                    Console.WriteLine($"Error: {ex.Message}");
+                }
+            }
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -813,9 +864,14 @@ namespace cfnat.win.gui
 
         private void timer2_Tick(object sender, EventArgs e)
         {
-            if (outputTextBox.Text.Length > 1047483647)
-            {
-                button2_Click(sender, e);
+            心跳 += 1;
+            if (outputTextBox.Text.Length > 1047483647)  button2_Click(sender, e);
+            if(心跳 % 60 == 0 && button5.Enabled == false) Check_COLO(sender, e);
+
+            if (执行开关 == 1) {
+                DateTime 当前时间 = DateTime.Now;
+                TimeSpan 已运行时间 = 当前时间 - 运行时间; // 计算时间差
+                groupBox2.Text = $"实时日志  运行时长 {Math.Floor(已运行时间.TotalHours).ToString("00")}:{已运行时间.Minutes.ToString("00")}:{已运行时间.Seconds.ToString("00")}";
             }
         }
 
@@ -856,7 +912,7 @@ namespace cfnat.win.gui
                 if (File.Exists(coloExe) && File.Exists(ipsV4) && File.Exists(ipsV6) && File.Exists(locationsJson))
                 {
                     button4.Enabled = true;
-                    log($"colo-{系统}-{架构}.exe 准备就绪！");
+                    //log($"colo-{系统}-{架构}.exe 准备就绪！");
                     //MessageBox.Show("所有文件均存在！");
                 }
                 else
@@ -868,14 +924,14 @@ namespace cfnat.win.gui
                     if (!File.Exists(ipsV4)) missingFiles += "ips-v4.txt ";
                     if (!File.Exists(ipsV6)) missingFiles += "ips-v6.txt ";
                     if (!File.Exists(locationsJson)) missingFiles += "locations.json ";
-                    log("以下文件不存在: " + missingFiles);
+                    //log("以下文件不存在: " + missingFiles);
                     //MessageBox.Show("以下文件不存在: " + missingFiles);
                 }
             }
             else
             {
                 button4.Enabled = false;
-                log("colo文件夹不存在！");
+                //log("colo文件夹不存在！");
                 //MessageBox.Show("colo文件夹不存在！");
             }
         }
