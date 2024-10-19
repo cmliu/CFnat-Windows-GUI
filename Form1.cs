@@ -17,7 +17,6 @@ namespace cfnat.win.gui
     public partial class Form1 : Form
     {
         private Process cmdProcess;
-        private NotifyIcon notifyIcon;
         private bool isExitingDueToDisclaimer = false;
         private List<Process> cmdProcesses = new List<Process>(); // 用来保存所有启动的cmd进程
         int 执行开关 = 0;
@@ -58,18 +57,12 @@ namespace cfnat.win.gui
             版本号 = "v" + myFileVersionInfo.FileVersion;
             标题 = "CFnat Windows GUI " + 版本号;
             this.Text = 标题 + " TG:CMLiussss BY:CM喂饭 干货满满";
-            // 初始化 NotifyIcon（系统托盘图标）
-            notifyIcon = new NotifyIcon();
-            notifyIcon.Icon = this.Icon;
-            notifyIcon.Text = "CFnat: 未运行";
-            notifyIcon.Visible = true;
-            notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
 
             // 为系统托盘图标添加上下文菜单
             ContextMenu contextMenu = new ContextMenu();
-            contextMenu.MenuItems.Add("打开", NotifyIcon_Open);
-            contextMenu.MenuItems.Add("退出", NotifyIcon_Exit);
-            notifyIcon.ContextMenu = contextMenu;
+            contextMenu.MenuItems.Add("打开", notifyIcon1_Open);
+            contextMenu.MenuItems.Add("退出", notifyIcon1_Exit);
+            notifyIcon1.ContextMenu = contextMenu;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -79,12 +72,12 @@ namespace cfnat.win.gui
                 this.WindowState = FormWindowState.Minimized; // 先最小化窗体
                 this.ShowInTaskbar = false; // 不在任务栏显示
                 this.Hide(); // 然后隐藏窗体
-                notifyIcon.Visible = true; // 显示托盘图标
+                notifyIcon1.Visible = true; // 显示托盘图标
             }
         }
 
         // 当双击系统托盘图标时触发
-        private void NotifyIcon_DoubleClick(object sender, EventArgs e)
+        private void notifyIcon1_DoubleClick(object sender, MouseEventArgs e)
         {
             this.WindowState = FormWindowState.Normal; // 恢复窗口
             this.Show(); // 显示窗口
@@ -93,15 +86,15 @@ namespace cfnat.win.gui
         }
 
         // 当点击系统托盘菜单中的"打开"选项时触发
-        private void NotifyIcon_Open(object sender, EventArgs e)
+        private void notifyIcon1_Open(object sender, EventArgs e)
         {
             Show();
             WindowState = FormWindowState.Normal;
-            //notifyIcon.Visible = false;
+            //notifyIcon1.Visible = false;
         }
 
         // 当点击系统托盘菜单中的"退出"选项时触发
-        private void NotifyIcon_Exit(object sender, EventArgs e)
+        private void notifyIcon1_Exit(object sender, EventArgs e)
         {
             try
             {
@@ -114,6 +107,7 @@ namespace cfnat.win.gui
                         if (process.ProcessName.ToLower().Contains("cfnat") ||
                             process.ProcessName.ToLower().Contains("colo"))
                         {
+                            notifyIcon1.Visible = false;
                             process.Kill(); // 强制终止进程
                             process.WaitForExit(1000); // 等待最多1秒确保进程终止
                         }
@@ -125,10 +119,10 @@ namespace cfnat.win.gui
                 }
 
                 // 清理托盘图标
-                if (notifyIcon != null)
+                if (notifyIcon1 != null)
                 {
-                    notifyIcon.Visible = false;
-                    notifyIcon.Dispose();
+                    notifyIcon1.Visible = false;
+                    notifyIcon1.Dispose();
                 }
 
                 // 强制退出应用程序
@@ -148,14 +142,14 @@ namespace cfnat.win.gui
             {
                 e.Cancel = true;
                 Hide();
-                notifyIcon.Visible = true;
+                notifyIcon1.Visible = true;
             }
             else
             {
                 e.Cancel = true;
                 await StopCommandAsync();
                 e.Cancel = false;
-                notifyIcon.Dispose();
+                notifyIcon1.Dispose();
                 Application.Exit();
             }
         }
@@ -201,10 +195,10 @@ namespace cfnat.win.gui
 
                 string 数据中心描述 = 数据中心;
                 if (数据中心描述.Length > 11) 数据中心描述 = 数据中心.Substring(0, 3) + "...";
-                notifyIcon.Icon = Properties.Resources.going;
+                notifyIcon1.Icon = Properties.Resources.going;
                 string 状态栏描述 = $"CFnat: 运行中\nC: {数据中心描述}\nD: {有效延迟}ms\nP: {服务端口}\nIPv{IP类型} {目标端口} {tls描述}";
                 if (状态栏描述.Length > 63) 状态栏描述 = 状态栏描述.Substring(0, 60) + "...";
-                notifyIcon.Text = 状态栏描述;
+                notifyIcon1.Text = 状态栏描述;
                 // 保存到 cfnat.ini
                 SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动, IP类型, 目标端口, tls, 随机IP, 有效IP, 负载IP, 并发请求, 检查的域名地址);
 
@@ -278,8 +272,8 @@ namespace cfnat.win.gui
                 执行开关 = 0;
                 groupBox2.Text = "实时日志";
                 checkBox4.Checked = false;
-                notifyIcon.Icon = this.Icon;
-                notifyIcon.Text = "CFnat: 未运行";
+                notifyIcon1.Icon = this.Icon;
+                notifyIcon1.Text = "CFnat: 未运行";
                 await StopCommandAsync();
                 await StopCommandAsync();
                 button1.Text = "启动";
