@@ -25,9 +25,21 @@ namespace cfnat.win.gui
         string 版本号;
         string 标题;
         private DateTime 运行时间;
+        private string configPath; // 添加配置文件路径字段
+        private string baseDirectory; // 添加基础目录字段
+        private string coloDirectory; // 添加colo目录字段
         public Form1()
         {
             InitializeComponent();
+
+            // 在构造函数中设置所有基础路径
+            baseDirectory = Path.GetDirectoryName(Application.ExecutablePath);
+            configPath = Path.Combine(baseDirectory, "cfnat.ini");
+            coloDirectory = Path.Combine(baseDirectory, "colo");
+
+            // 设置工作目录为程序所在目录
+            Directory.SetCurrentDirectory(baseDirectory);
+
             LoadFromIni();
             this.FormClosing += Form1_FormClosing;
             this.Load += Form1_Load; // 添加这一行来确保 Load 事件被处理
@@ -74,9 +86,10 @@ namespace cfnat.win.gui
         // 当双击系统托盘图标时触发
         private void NotifyIcon_DoubleClick(object sender, EventArgs e)
         {
-            Show();
-            WindowState = FormWindowState.Normal;
-            //notifyIcon.Visible = false;
+            this.WindowState = FormWindowState.Normal; // 恢复窗口
+            this.Show(); // 显示窗口
+            this.BringToFront(); // 将窗口带到前台
+            this.PerformLayout(); // 手动触发布局更新
         }
 
         // 当点击系统托盘菜单中的"打开"选项时触发
@@ -298,9 +311,14 @@ namespace cfnat.win.gui
                     cmdProcess.StartInfo.StandardOutputEncoding = Encoding.UTF8;
                     cmdProcess.StartInfo.StandardErrorEncoding = Encoding.UTF8;
 
+                    // 设置工作目录为程序目录下的相应文件夹
                     if (!string.IsNullOrEmpty(workingDirectory))
                     {
-                        cmdProcess.StartInfo.WorkingDirectory = workingDirectory;
+                        cmdProcess.StartInfo.WorkingDirectory = Path.Combine(baseDirectory, workingDirectory);
+                    }
+                    else
+                    {
+                        cmdProcess.StartInfo.WorkingDirectory = baseDirectory;
                     }
 
                     cmdProcess.OutputDataReceived += (s, e) =>
@@ -564,7 +582,8 @@ namespace cfnat.win.gui
         //SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动);
         private void SaveToIni(string 系统, string 架构, string 数据中心, string 有效延迟, string 服务端口, string 开机启动, string IP类型, string 目标端口, string tls, string 随机IP, string 有效IP, string 负载IP, string 并发请求, string 检查的域名地址)
         {
-            using (StreamWriter writer = new StreamWriter("cfnat.ini"))
+            // 使用完整路径保存配置文件
+            using (StreamWriter writer = new StreamWriter(configPath))
             {
                 writer.WriteLine($"sys={系统}");
                 writer.WriteLine($"arch={架构}");
@@ -586,12 +605,12 @@ namespace cfnat.win.gui
         private void LoadFromIni()
         {
             // 检查 cfnat.ini 文件是否存在
-            if (File.Exists("cfnat.ini"))
+            if (File.Exists(configPath))
             {
                 try
                 {
                     // 读取文件中的所有行
-                    var lines = File.ReadAllLines("cfnat.ini");
+                    var lines = File.ReadAllLines(configPath);
 
                     foreach (var line in lines)
                     {
@@ -623,20 +642,16 @@ namespace cfnat.win.gui
                                         textBox5.Text = value;
                                         break;
                                     case "on":
-                                        if (value.ToLower() == "true") checkBox1.Checked = true;
-                                        else checkBox1.Checked = false;
+                                        checkBox1.Checked = value.ToLower() == "true";
                                         break;
                                     case "ips":
-                                        if (value.ToLower() == "4") comboBox3.Text = "IPv4";
-                                        else comboBox3.Text = "IPv6";
+                                        comboBox3.Text = value.ToLower() == "4" ? "IPv4" : "IPv6";
                                         break;
                                     case "tls":
-                                        if (value.ToLower() == "true") checkBox3.Checked = true;
-                                        else checkBox3.Checked = false;
+                                        checkBox3.Checked = value.ToLower() == "true";
                                         break;
                                     case "random":
-                                        if (value.ToLower() == "true") checkBox2.Checked = true;
-                                        else checkBox2.Checked = false;
+                                        checkBox2.Checked = value.ToLower() == "true";
                                         break;
                                     case "ipnum":
                                         textBox7.Text = value;
@@ -694,6 +709,7 @@ namespace cfnat.win.gui
             }
         }
 
+
         // Windows API 导入
         [System.Runtime.InteropServices.DllImport("kernel32.dll")]
         static extern bool AttachConsole(uint dwProcessId);
@@ -744,16 +760,17 @@ namespace cfnat.win.gui
 
         private void AddToStartup()
         {
-            // 获取当前程序的路径
-            string programName = "CFnat Windows GUI"; // 这里替换为你的程序名称
+            string programName = "CFnat Windows GUI";
             string exePath = Application.ExecutablePath;
 
-            // 使用注册表将程序添加到启动项
+            // 在注册表值中添加引号，确保路径正确解析
+            string regValue = $"\"{exePath}\"";
+
             using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true))
             {
                 if (key != null)
                 {
-                    key.SetValue(programName, exePath);
+                    key.SetValue(programName, regValue);
                 }
             }
         }
@@ -782,7 +799,7 @@ namespace cfnat.win.gui
             {
                 button1_Click(sender, e);
             }
-            this.Height = 492;
+            //this.Height = 492;
             await CheckGitHubVersionAsync();
         }
 
@@ -892,52 +909,43 @@ namespace cfnat.win.gui
 
         private void Check_COLO(object sender, EventArgs e)
         {
-            // 获取当前程序的目录
-            string currentDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string coloFolder = Path.Combine(currentDirectory, "colo");
-
-            // 检查是否存在colo文件夹
-            if (Directory.Exists(coloFolder))
+            // 使用预定义的colo目录路径
+            if (Directory.Exists(coloDirectory))
             {
                 string 系统 = comboBox1.Text;
                 string 架构 = comboBox2.Text;
-                // 定义要检查的文件路径
-                string coloExe = Path.Combine(coloFolder, $"colo-{系统}-{架构}.exe");
-                string ipsV4 = Path.Combine(coloFolder, "ips-v4.txt");
-                string ipsV6 = Path.Combine(coloFolder, "ips-v6.txt");
-                string locationsJson = Path.Combine(coloFolder, "locations.json");
-                string ipCsv = Path.Combine(coloFolder, "ip.csv");
-                if (File.Exists(ipCsv)) 
+
+                // 定义要检查的文件路径，全部使用Path.Combine
+                string coloExe = Path.Combine(coloDirectory, $"colo-{系统}-{架构}.exe");
+                string ipsV4 = Path.Combine(coloDirectory, "ips-v4.txt");
+                string ipsV6 = Path.Combine(coloDirectory, "ips-v6.txt");
+                string locationsJson = Path.Combine(coloDirectory, "locations.json");
+                string ipCsv = Path.Combine(coloDirectory, "ip.csv");
+
+                if (File.Exists(ipCsv))
                 {
                     button5.Enabled = true;
                     button5.Visible = true;
                 }
-                
-                // 检查是否存在所需的4个文件
-                if (File.Exists(coloExe) && File.Exists(ipsV4) && File.Exists(ipsV6) && File.Exists(locationsJson))
+
+                if (File.Exists(coloExe) && File.Exists(ipsV4) &&
+                    File.Exists(ipsV6) && File.Exists(locationsJson))
                 {
                     button4.Enabled = true;
-                    //log($"colo-{系统}-{架构}.exe 准备就绪！");
-                    //MessageBox.Show("所有文件均存在！");
                 }
                 else
                 {
                     button4.Enabled = false;
-                    // 具体提示哪个文件不存在
                     string missingFiles = "";
-                    if (!File.Exists(coloExe)) missingFiles += $"colo-{系统}-{架构}.exe";
+                    if (!File.Exists(coloExe)) missingFiles += $"colo-{系统}-{架构}.exe ";
                     if (!File.Exists(ipsV4)) missingFiles += "ips-v4.txt ";
                     if (!File.Exists(ipsV6)) missingFiles += "ips-v6.txt ";
                     if (!File.Exists(locationsJson)) missingFiles += "locations.json ";
-                    //log("以下文件不存在: " + missingFiles);
-                    //MessageBox.Show("以下文件不存在: " + missingFiles);
                 }
             }
             else
             {
                 button4.Enabled = false;
-                //log("colo文件夹不存在！");
-                //MessageBox.Show("colo文件夹不存在！");
             }
         }
 
@@ -956,47 +964,32 @@ namespace cfnat.win.gui
                 log("执行colo生成缓存IP库");
                 string 系统 = comboBox1.Text;
                 string 架构 = comboBox2.Text;
-                string IP类型 = "4";
-                if (comboBox3.Text == "IPv6") IP类型 = "6";
-                string 随机IP = "true";
-                if (checkBox2.Checked == false) 随机IP = "false";
+                string IP类型 = comboBox3.Text == "IPv6" ? "6" : "4";
+                string 随机IP = checkBox2.Checked ? "true" : "false";
                 string 并发请求 = textBox9.Text;
+
                 log($"生成 {textBox1.Text}缓存 IP库");
-                await RunCommandAsync($"colo-{系统}-{架构}.exe -ips={IP类型} -random={随机IP}  -task={并发请求}", "colo");
+                await RunCommandAsync($"colo-{系统}-{架构}.exe -ips={IP类型} -random={随机IP} -task={并发请求}", "colo");
+
                 string[] 数据中心数组 = textBox1.Text.Split(',');
+                string ipCsvPath = Path.Combine(coloDirectory, "ip.csv");
 
-                // 检测 colo/ip.csv 文件是否存在
-                // 获取程序当前目录并拼接相对路径
-                string filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "colo", "ip.csv");
-
-                if (File.Exists(filePath))
+                if (File.Exists(ipCsvPath))
                 {
-                    StringBuilder IP库 = new StringBuilder(); // 用于存储符合条件的IP
+                    StringBuilder IP库 = new StringBuilder();
+                    string[] lines = File.ReadAllLines(ipCsvPath);
 
-                    // 读取 ip.csv 文件的内容
-                    string[] lines = File.ReadAllLines(filePath);
-
-                    // 跳过第一行（标题行），并逐行处理数据
-                    foreach (var line in lines.Skip(1)) // Skip(1) 跳过标题行
+                    foreach (var line in lines.Skip(1))
                     {
-                        string[] columns = line.Split(','); // 按逗号分割列
-                        if (columns.Length >= 5)
+                        string[] columns = line.Split(',');
+                        if (columns.Length >= 5 && 数据中心数组.Contains(columns[1]))
                         {
-                            string ip地址 = columns[0];    // IP地址
-                            string 数据中心名 = columns[1]; // 数据中心
-
-                            // 如果该IP的 数据中心 在数据中心数组中
-                            if (数据中心数组.Contains(数据中心名))
-                            {
-                                IP库.AppendLine(ip地址); // 将符合条件的IP添加到IP库
-                            }
+                            IP库.AppendLine(columns[0]);
                         }
                     }
 
-                    // 将IP库内容写入到程序目录的 ips-v4.txt 文件中
-                    string outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"ips-v{IP类型}.txt");
+                    string outputPath = Path.Combine(baseDirectory, $"ips-v{IP类型}.txt");
                     File.WriteAllText(outputPath, IP库.ToString());
-
                     log("IP库已成功写入到 ips-v4.txt 文件中。");
                 }
                 else
