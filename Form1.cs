@@ -249,7 +249,7 @@ namespace cfnat.win.gui
                             string outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"ips-v{IP类型}.txt");
                             File.WriteAllText(outputPath, IP库.ToString());
 
-                            log("IP库已成功写入到 ips-v4.txt 文件中。");
+                            log($"IP库已成功写入到 ips-v{IP类型}.txt 文件中。");
                         }
                         else
                         {
