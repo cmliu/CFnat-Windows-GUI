@@ -79,11 +79,12 @@ namespace cfnat.win.gui
                 {
                     var csvLines = File.ReadAllLines(filePath);
                     DataTable dt = new DataTable();
-                    string[] headers = csvLines[0].Split(',');
-                    foreach (string header in headers)
-                    {
-                        dt.Columns.Add(header);
-                    }
+                    // 手动定义列头
+                    dt.Columns.Add("IP地址");
+                    dt.Columns.Add("数据中心");
+                    dt.Columns.Add("地区");
+                    dt.Columns.Add("城市");
+                    dt.Columns.Add("网络延迟");
 
                     for (int i = 1; i < csvLines.Length; i++)
                     {

@@ -160,7 +160,7 @@ namespace cfnat.win.gui
             {
                 执行开关 = 1;
                 运行时间 = DateTime.Now; // 获取当前时间
-                groupBox2.Text = "实时日志  运行时长 00:00:00";
+                groupBox2.Text = "实时日志 运行时长 00:00:00";
                 checkBox4.Checked = true;
                 outputTextBox.Clear();
                 button1.Text = "停止";
@@ -659,6 +659,9 @@ namespace cfnat.win.gui
                                     case "domain":
                                         textBox10.Text = value;
                                         break;
+                                    case "port":
+                                        textBox6.Text = value;
+                                        break;
                                     default:
                                         // 可以添加日志或处理未识别的键
                                         break;
@@ -881,13 +884,25 @@ namespace cfnat.win.gui
         private void timer2_Tick(object sender, EventArgs e)
         {
             心跳 += 1;
-            if (outputTextBox.Text.Length > 1047483647)  button2_Click(sender, e);
-            if(心跳 % 60 == 0 && button5.Enabled == false) Check_COLO(sender, e);
+
+            if (心跳 % 3600 == 0 || outputTextBox.Lines.Length > 16384)
+            {
+                var lines = outputTextBox.Lines;
+                if (lines.Length > 16384)
+                {
+                    var last100Lines = lines.Skip(lines.Length - 8192).ToArray();
+                    outputTextBox.Text = string.Join(Environment.NewLine, last100Lines);
+                    outputTextBox.SelectionStart = outputTextBox.Text.Length;
+                    outputTextBox.ScrollToCaret();
+                }
+            }
+
+            if (心跳 % 60 == 0 && button5.Enabled == false) Check_COLO(sender, e);
 
             if (执行开关 == 1) {
                 DateTime 当前时间 = DateTime.Now;
                 TimeSpan 已运行时间 = 当前时间 - 运行时间; // 计算时间差
-                groupBox2.Text = $"实时日志  运行时长 {Math.Floor(已运行时间.TotalHours).ToString("00")}:{已运行时间.Minutes.ToString("00")}:{已运行时间.Seconds.ToString("00")}";
+                groupBox2.Text = $"实时日志 运行时长 {Math.Floor(已运行时间.TotalHours).ToString("00")}:{已运行时间.Minutes.ToString("00")}:{已运行时间.Seconds.ToString("00")} {outputTextBox.Lines.Length}";
             }
         }
 
