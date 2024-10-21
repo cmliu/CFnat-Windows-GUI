@@ -11,6 +11,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 namespace cfnat.win.gui
 {
@@ -229,26 +230,27 @@ namespace cfnat.win.gui
                             foreach (var line in lines.Skip(1)) // Skip(1) 跳过标题行
                             {
                                 string[] columns = line.Split(','); // 按逗号分割列
-                                /*
-                               if (columns.Length >= 5)
-                               {
-                                   string ip地址 = columns[0];    // IP地址
-                                   string 数据中心名 = columns[1]; // 数据中心
-
-                                   // 如果该IP的 数据中心 在数据中心数组中
-                                   if (数据中心数组.Contains(数据中心名))
-                                   {
-                                       IP库.AppendLine(ip地址); // 将符合条件的IP添加到IP库
-                                   }
-                               }
-                               */
                                 IP库.AppendLine(columns[0]); // 将符合条件的IP添加到IP库
                             }
 
                             // 将IP库内容写入到程序目录的 ips-v4.txt 文件中
                             string outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, $"ips-v{IP类型}.txt");
-                            File.WriteAllText(outputPath, IP库.ToString());
-
+                            string CIDR库;
+                            if (IP类型 == "4")
+                            {
+                                // 使用正则表达式修改每个 IP 的最后一段为 0 并加上 /24
+                                string pattern = @"(\d+\.\d+\.\d+)\.\d+";
+                                string replacement = "$1.0/24";
+                                CIDR库 = Regex.Replace(IP库.ToString(), pattern, replacement);
+                            }
+                            else
+                            {
+                                // 使用正则表达式匹配前 3 段 IPv6 地址，并添加 ::/48
+                                string pattern = @"^([0-9a-fA-F]{1,4}:[0-9a-fA-F]{1,4}:[0-9a-fA-F]{1,4}):.*";
+                                string replacement = "$1::/48";
+                                CIDR库 = Regex.Replace(IP库.ToString(), pattern, replacement, RegexOptions.Multiline);
+                            }
+                            File.WriteAllText(outputPath, CIDR库.ToString());
                             log($"IP库已成功写入到 ips-v{IP类型}.txt 文件中。");
                         }
                         else
