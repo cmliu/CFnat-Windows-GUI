@@ -324,7 +324,7 @@ namespace cfnat.win.gui
                             this.Invoke(new Action(() =>
                             {
                                 string 进度内容 = e.Data + Environment.NewLine;
-                                outputTextBox.AppendText(进度内容);
+                                if(checkBox5.Checked) outputTextBox.AppendText(进度内容);
 
                                 if (进度内容.Contains("已完成: ") && 进度内容.Contains("%"))
                                 {
