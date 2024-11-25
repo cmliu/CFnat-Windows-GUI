@@ -52,6 +52,7 @@
             this.button4 = new System.Windows.Forms.Button();
             this.button2 = new System.Windows.Forms.Button();
             this.groupBox2 = new System.Windows.Forms.GroupBox();
+            this.checkBox5 = new System.Windows.Forms.CheckBox();
             this.checkBox4 = new System.Windows.Forms.CheckBox();
             this.outputTextBox = new System.Windows.Forms.RichTextBox();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
@@ -59,7 +60,6 @@
             this.label8 = new System.Windows.Forms.Label();
             this.comboBox3 = new System.Windows.Forms.ComboBox();
             this.label9 = new System.Windows.Forms.Label();
-            this.textBox6 = new System.Windows.Forms.TextBox();
             this.label10 = new System.Windows.Forms.Label();
             this.textBox7 = new System.Windows.Forms.TextBox();
             this.label11 = new System.Windows.Forms.Label();
@@ -68,12 +68,12 @@
             this.textBox9 = new System.Windows.Forms.TextBox();
             this.label12 = new System.Windows.Forms.Label();
             this.label13 = new System.Windows.Forms.Label();
-            this.textBox10 = new System.Windows.Forms.TextBox();
             this.checkBox3 = new System.Windows.Forms.CheckBox();
             this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.comboBox4 = new System.Windows.Forms.ComboBox();
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
-            this.checkBox5 = new System.Windows.Forms.CheckBox();
+            this.comboBox5 = new System.Windows.Forms.ComboBox();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox3.SuspendLayout();
@@ -324,6 +324,16 @@
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "实时日志";
             // 
+            // checkBox5
+            // 
+            this.checkBox5.AutoSize = true;
+            this.checkBox5.Location = new System.Drawing.Point(522, 1);
+            this.checkBox5.Name = "checkBox5";
+            this.checkBox5.Size = new System.Drawing.Size(72, 16);
+            this.checkBox5.TabIndex = 31;
+            this.checkBox5.Text = "完整日志";
+            this.checkBox5.UseVisualStyleBackColor = true;
+            // 
             // checkBox4
             // 
             this.checkBox4.AutoSize = true;
@@ -389,17 +399,6 @@
             this.label9.Size = new System.Drawing.Size(83, 12);
             this.label9.TabIndex = 20;
             this.label9.Text = "转发目标端口:";
-            // 
-            // textBox6
-            // 
-            this.textBox6.Location = new System.Drawing.Point(99, 43);
-            this.textBox6.MaxLength = 5;
-            this.textBox6.Name = "textBox6";
-            this.textBox6.Size = new System.Drawing.Size(89, 21);
-            this.textBox6.TabIndex = 18;
-            this.textBox6.Text = "443";
-            this.textBox6.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.textBox5_KeyPress);
-            this.textBox6.Leave += new System.EventHandler(this.textBox6_Leave);
             // 
             // label10
             // 
@@ -482,32 +481,24 @@
             this.label13.TabIndex = 28;
             this.label13.Text = "检查的域名地址:";
             // 
-            // textBox10
-            // 
-            this.textBox10.Location = new System.Drawing.Point(361, 16);
-            this.textBox10.MaxLength = 1000;
-            this.textBox10.Name = "textBox10";
-            this.textBox10.Size = new System.Drawing.Size(408, 21);
-            this.textBox10.TabIndex = 27;
-            this.textBox10.Text = "cloudflaremirrors.com/debian";
-            this.textBox10.Leave += new System.EventHandler(this.textBox10_Leave);
-            // 
             // checkBox3
             // 
             this.checkBox3.AutoSize = true;
             this.checkBox3.Checked = true;
             this.checkBox3.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox3.Location = new System.Drawing.Point(194, 45);
+            this.checkBox3.Location = new System.Drawing.Point(193, 45);
             this.checkBox3.Name = "checkBox3";
             this.checkBox3.Size = new System.Drawing.Size(42, 16);
             this.checkBox3.TabIndex = 29;
             this.checkBox3.Text = "TLS";
             this.checkBox3.UseVisualStyleBackColor = true;
+            this.checkBox3.CheckedChanged += new System.EventHandler(this.checkBox3_CheckedChanged);
             // 
             // groupBox3
             // 
+            this.groupBox3.Controls.Add(this.comboBox5);
+            this.groupBox3.Controls.Add(this.comboBox4);
             this.groupBox3.Controls.Add(this.checkBox3);
-            this.groupBox3.Controls.Add(this.textBox10);
             this.groupBox3.Controls.Add(this.label13);
             this.groupBox3.Controls.Add(this.label12);
             this.groupBox3.Controls.Add(this.textBox9);
@@ -516,7 +507,6 @@
             this.groupBox3.Controls.Add(this.label11);
             this.groupBox3.Controls.Add(this.textBox7);
             this.groupBox3.Controls.Add(this.label10);
-            this.groupBox3.Controls.Add(this.textBox6);
             this.groupBox3.Controls.Add(this.label9);
             this.groupBox3.Controls.Add(this.comboBox3);
             this.groupBox3.Controls.Add(this.label8);
@@ -527,6 +517,24 @@
             this.groupBox3.TabStop = false;
             this.groupBox3.Text = "高级设置";
             this.groupBox3.Visible = false;
+            // 
+            // comboBox4
+            // 
+            this.comboBox4.FormattingEnabled = true;
+            this.comboBox4.Items.AddRange(new object[] {
+            "443",
+            "2053",
+            "2083",
+            "2087",
+            "2096",
+            "8443"});
+            this.comboBox4.Location = new System.Drawing.Point(99, 43);
+            this.comboBox4.Name = "comboBox4";
+            this.comboBox4.Size = new System.Drawing.Size(89, 20);
+            this.comboBox4.TabIndex = 30;
+            this.comboBox4.Text = "443";
+            this.comboBox4.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.textBox5_KeyPress);
+            this.comboBox4.Leave += new System.EventHandler(this.comboBox4_Leave);
             // 
             // progressBar1
             // 
@@ -543,15 +551,23 @@
             this.notifyIcon1.Visible = true;
             this.notifyIcon1.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_DoubleClick);
             // 
-            // checkBox5
+            // comboBox5
             // 
-            this.checkBox5.AutoSize = true;
-            this.checkBox5.Location = new System.Drawing.Point(522, 1);
-            this.checkBox5.Name = "checkBox5";
-            this.checkBox5.Size = new System.Drawing.Size(72, 16);
-            this.checkBox5.TabIndex = 31;
-            this.checkBox5.Text = "完整日志";
-            this.checkBox5.UseVisualStyleBackColor = true;
+            this.comboBox5.FormattingEnabled = true;
+            this.comboBox5.Items.AddRange(new object[] {
+            "cloudflaremirrors.com/debian",
+            "congresosantogrial.es",
+            "www.samaritain.fr",
+            "stakepromo.org",
+            "vazkepa.ph",
+            "www.oolorbe.buzz",
+            "fump.biz"});
+            this.comboBox5.Location = new System.Drawing.Point(360, 16);
+            this.comboBox5.Name = "comboBox5";
+            this.comboBox5.Size = new System.Drawing.Size(407, 20);
+            this.comboBox5.TabIndex = 31;
+            this.comboBox5.Text = "cloudflaremirrors.com/debian";
+            this.comboBox5.Leave += new System.EventHandler(this.comboBox5_Leave);
             // 
             // Form1
             // 
@@ -559,7 +575,7 @@
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.AutoSize = true;
             this.AutoSizeMode = System.Windows.Forms.AutoSizeMode.GrowAndShrink;
-            this.ClientSize = new System.Drawing.Size(800, 505);
+            this.ClientSize = new System.Drawing.Size(799, 508);
             this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.groupBox1);
@@ -609,7 +625,6 @@
         private System.Windows.Forms.Label label8;
         private System.Windows.Forms.ComboBox comboBox3;
         private System.Windows.Forms.Label label9;
-        private System.Windows.Forms.TextBox textBox6;
         private System.Windows.Forms.Label label10;
         private System.Windows.Forms.TextBox textBox7;
         private System.Windows.Forms.Label label11;
@@ -618,13 +633,14 @@
         private System.Windows.Forms.TextBox textBox9;
         private System.Windows.Forms.Label label12;
         private System.Windows.Forms.Label label13;
-        private System.Windows.Forms.TextBox textBox10;
         private System.Windows.Forms.CheckBox checkBox3;
         private System.Windows.Forms.GroupBox groupBox3;
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Button button5;
         private System.Windows.Forms.NotifyIcon notifyIcon1;
         private System.Windows.Forms.CheckBox checkBox5;
+        private System.Windows.Forms.ComboBox comboBox4;
+        private System.Windows.Forms.ComboBox comboBox5;
     }
 }
 

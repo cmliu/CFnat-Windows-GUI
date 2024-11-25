@@ -179,7 +179,7 @@ namespace cfnat.win.gui
                 //高级设置参数
                 string IP类型 = "4";
                 if (comboBox3.Text == "IPv6") IP类型 = "6";
-                string 目标端口 = textBox6.Text;
+                string 目标端口 = comboBox4.Text;
                 string 随机IP = "true";
                 string tls = "true";
                 if (checkBox2.Checked == false) 随机IP = "false";
@@ -192,7 +192,7 @@ namespace cfnat.win.gui
                 string 有效IP = textBox7.Text;
                 string 负载IP = textBox8.Text;
                 string 并发请求 = textBox9.Text;
-                string 检查的域名地址 = textBox10.Text;
+                string 检查的域名地址 = comboBox5.Text;
 
                 string 数据中心描述 = 数据中心;
                 if (数据中心描述.Length > 11) 数据中心描述 = 数据中心.Substring(0, 3) + "...";
@@ -250,6 +250,10 @@ namespace cfnat.win.gui
                                 string replacement = "$1::/48";
                                 CIDR库 = Regex.Replace(IP库.ToString(), pattern, replacement, RegexOptions.Multiline);
                             }
+                            // 对CIDR库进行去重
+                            var uniqueCIDR库 = new HashSet<string>(CIDR库.Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries));
+                            CIDR库 = string.Join(Environment.NewLine, uniqueCIDR库);
+
                             File.WriteAllText(outputPath, CIDR库.ToString());
                             log($"IP库已成功写入到 ips-v{IP类型}.txt 文件中。");
                         }
@@ -261,6 +265,36 @@ namespace cfnat.win.gui
                 }
                 if (File.Exists($"cfnat-{系统}-{架构}.exe"))
                 {
+                    string ipv4Txt = Path.Combine(currentDirectory, $"ips-v4.txt");
+                    if (IP类型 == "4" && File.Exists(ipv4Txt))
+                    {
+                        var lines = File.ReadAllLines(ipv4Txt).ToList();
+                        var newLines = new List<string>();
+
+                        foreach (var line in lines)
+                        {
+                            if (line.Contains("1.0.0.0/24"))
+                            {
+                                for (int i = 0; i <= 255; i++)
+                                {
+                                    newLines.Add($"1.0.0.{i}");
+                                }
+                            }
+                            else if (line.Contains("1.1.1.0/24"))
+                            {
+                                for (int i = 0; i <= 255; i++)
+                                {
+                                    newLines.Add($"1.1.1.{i}");
+                                }
+                            }
+                            else
+                            {
+                                newLines.Add(line);
+                            }
+                        }
+
+                        File.WriteAllLines(ipv4Txt, newLines);
+                    }
                     await RunCommandAsync($"cfnat-{系统}-{架构}.exe -colo={数据中心} -delay={有效延迟} -addr=\"0.0.0.0:{服务端口}\" -ips={IP类型} -port={目标端口} -tls={tls} -random={随机IP} -ipnum={有效IP} -num={负载IP} -task={并发请求} -domain=\"{检查的域名地址}\"");
                 }
                 else
@@ -284,6 +318,7 @@ namespace cfnat.win.gui
                 textBox1.Enabled = true;
                 textBox2.Enabled = true;
                 textBox5.ReadOnly = false;
+                if (button5.Enabled == false) Check_COLO(sender, e);
             }
         }
 
@@ -537,9 +572,23 @@ namespace cfnat.win.gui
             ValidateNumericRange(textBox2);
         }
 
-        private void textBox6_Leave(object sender, EventArgs e)
+        private void comboBox4_Leave(object sender, EventArgs e)
         {
-            ValidateNumericRange(textBox6);
+            // 尝试将输入的文本转换为数字
+            if (int.TryParse(comboBox4.Text, out int value))
+            {
+                // 检查数字是否在范围内
+                if (value < 1 || value > 65535)
+                {
+                    MessageBox.Show("请输入范围在 1 到 65535 之间的数字。", "输入错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    comboBox4.Focus(); // 重新聚焦到文本框
+                }
+            }
+            else
+            {
+                MessageBox.Show("请输入有效的数字。", "输入错误", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                comboBox4.Focus(); // 重新聚焦到文本框
+            }
         }
 
         private void textBox7_Leave(object sender, EventArgs e)
@@ -659,10 +708,10 @@ namespace cfnat.win.gui
                                         textBox9.Text = value;
                                         break;
                                     case "domain":
-                                        textBox10.Text = value;
+                                        comboBox5.Text = value;
                                         break;
                                     case "port":
-                                        textBox6.Text = value;
+                                        comboBox4.Text = value;
                                         break;
                                     default:
                                         // 可以添加日志或处理未识别的键
@@ -736,7 +785,7 @@ namespace cfnat.win.gui
             string 开机启动 = checkBox1.Checked.ToString();
             string IP类型 = "4";
             if (comboBox3.Text == "IPv6") IP类型 = "6";
-            string 目标端口 = textBox6.Text;
+            string 目标端口 = comboBox4.Text;
             string 随机IP = "true";
             string tls = "true";
             if (checkBox2.Checked == false) 随机IP = "false";
@@ -744,7 +793,7 @@ namespace cfnat.win.gui
             string 有效IP = textBox7.Text;
             string 负载IP = textBox8.Text;
             string 并发请求 = textBox9.Text;
-            string 检查的域名地址 = textBox10.Text;
+            string 检查的域名地址 = comboBox5.Text;
             SaveToIni(系统, 架构, 数据中心, 有效延迟, 服务端口, 开机启动, IP类型, 目标端口, tls, 随机IP, 有效IP, 负载IP, 并发请求, 检查的域名地址);
             // 判断是否需要添加或移除启动项
             if (checkBox1.Checked)
@@ -864,25 +913,6 @@ namespace cfnat.win.gui
             }
         }
 
-        private void textBox10_Leave(object sender, EventArgs e)
-        {
-            if (textBox10.Text.Length >= 8)
-            {
-                string first8Chars = textBox10.Text.Substring(0, 8).ToLower();
-                if (first8Chars == "https://")
-                {
-                    // 截取 "https://" 之后的内容，并赋值给 textBox10.Text
-                    textBox10.Text = textBox10.Text.Substring(8);
-                }
-                string first7Chars = textBox10.Text.Substring(0, 7).ToLower();
-                if (first7Chars == "http://")
-                {
-                    // 截取 "https://" 之后的内容，并赋值给 textBox10.Text
-                    textBox10.Text = textBox10.Text.Substring(7);
-                }
-            }
-        }
-
         private void timer2_Tick(object sender, EventArgs e)
         {
             心跳 += 1;
@@ -899,7 +929,7 @@ namespace cfnat.win.gui
                 }
             }
 
-            if (心跳 % 60 == 0 && button5.Enabled == false) Check_COLO(sender, e);
+            if (button5.Enabled == false && 心跳 % 10 == 0) Check_COLO(sender, e);
 
             if (执行开关 == 1) {
                 DateTime 当前时间 = DateTime.Now;
@@ -1067,5 +1097,40 @@ namespace cfnat.win.gui
             }
         }
 
+        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        {
+            if(checkBox3.Checked == true)
+            {
+                comboBox4.Text = "443";
+                comboBox4.Items.Clear();
+                string[] ports = { "443", "2053", "2083", "2087", "2096", "8443" };
+                comboBox4.Items.AddRange(ports);
+            } else
+            {
+                comboBox4.Text = "80";
+                comboBox4.Items.Clear();
+                string[] ports = { "80", "8080", "8880", "2052", "2082", "2086", "2095" };
+                comboBox4.Items.AddRange(ports);
+            }
+        }
+
+        private void comboBox5_Leave(object sender, EventArgs e)
+        {
+            if (comboBox5.Text.Length >= 8)
+            {
+                string first8Chars = comboBox5.Text.Substring(0, 8).ToLower();
+                if (first8Chars == "https://")
+                {
+                    // 截取 "https://" 之后的内容，并赋值给 comboBox5.Text
+                    comboBox5.Text = comboBox5.Text.Substring(8);
+                }
+                string first7Chars = comboBox5.Text.Substring(0, 7).ToLower();
+                if (first7Chars == "http://")
+                {
+                    // 截取 "https://" 之后的内容，并赋值给 comboBox5.Text
+                    comboBox5.Text = comboBox5.Text.Substring(7);
+                }
+            }
+        }
     }
 }
